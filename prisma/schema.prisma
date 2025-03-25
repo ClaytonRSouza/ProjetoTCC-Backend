@@ -13,6 +13,22 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+//enum
+enum Embalagem {
+  SACARIA
+  BAG_1TN
+  BAG_750KG
+  LITRO
+  GALAO_2L
+  GALAO_5L
+  GALAO_10L
+  BALDE_20L
+  TAMBOR_200L
+  IBC_1000L
+  OUTROS
+}
+
+//models
 model Usuario {
   id           Int           @id @default(autoincrement())
   nome         String
@@ -26,25 +42,34 @@ model Propriedade {
   nome      String
   usuarioId Int
   usuario   Usuario   @relation(fields: [usuarioId], references: [id])
-  produtos  Produto[]
+  estoque   Estoque[]
 }
 
 model Produto {
+  id        Int       @id @default(autoincrement())
+  nome      String
+  embalagem Embalagem
+  validade  DateTime
+  estoque   Estoque[]
+}
+
+model Estoque {
   id            Int            @id @default(autoincrement())
-  nome          String
-  categoria     String
-  quantidade    Int
-  validade      DateTime
   propriedadeId Int
   propriedade   Propriedade    @relation(fields: [propriedadeId], references: [id])
+  produtoId     Int
+  produto       Produto        @relation(fields: [produtoId], references: [id])
+  quantidade    Int
   movimentacoes Movimentacao[]
 }
 
 model Movimentacao {
-  id               Int      @id @default(autoincrement())
-  produtoId        Int
-  produto          Produto  @relation(fields: [produtoId], references: [id])
-  tipo             String
-  quantidade       Int
-  dataMovimentacao DateTime @default(now())
+  id            Int      @id @default(autoincrement())
+  estoqueId     Int
+  estoque       Estoque  @relation(fields: [estoqueId], references: [id])
+  tipo          String
+  quantidade    Int
+  data          DateTime @default(now())
+  produtoStatus String   @default("ativo")
+  justificativa String?
 }

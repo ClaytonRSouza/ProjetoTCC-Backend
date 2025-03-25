@@ -1,9 +1,9 @@
-import admin from "../config/firebaseAdmin";
-import { prisma } from "../config/database";
-import { usuarioDto } from "../dtos/usuarioDto";
+import admin from "../../config/firebaseAdmin";
+import { prisma } from "../../config/database";
+import { usuarioDto } from "../../dtos/usuarioDto";
 import { RequestHandler } from "express";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../config/firebaseConfig";
+import { auth } from "../../config/firebaseConfig";
 
 // cadastro de usuários
 export const registerUser: RequestHandler = async (req, res) => {
