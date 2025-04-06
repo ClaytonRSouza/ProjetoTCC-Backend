@@ -25,7 +25,18 @@ enum Embalagem {
   BALDE_20L
   TAMBOR_200L
   IBC_1000L
+  PACOTE_1KG
+  PACOTE_5KG
+  PACOTE_10KG
+  PACOTE_15KG
+  PACOTE_500G
   OUTROS
+}
+
+enum TipoMovimentacao {
+  ENTRADA
+  SAIDA
+  AJUSTE
 }
 
 //models
@@ -64,12 +75,12 @@ model Estoque {
 }
 
 model Movimentacao {
-  id            Int      @id @default(autoincrement())
+  id            Int              @id @default(autoincrement())
   estoqueId     Int
-  estoque       Estoque  @relation(fields: [estoqueId], references: [id])
-  tipo          String
+  estoque       Estoque          @relation(fields: [estoqueId], references: [id])
+  tipo          TipoMovimentacao
   quantidade    Int
-  data          DateTime @default(now())
-  produtoStatus String   @default("ativo")
+  data          DateTime         @default(now())
+  produtoStatus String           @default("ativo")
   justificativa String?
 }
