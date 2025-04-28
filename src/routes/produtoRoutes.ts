@@ -1,23 +1,32 @@
-import express from "express";
+import { FastifyInstance } from "fastify";
+import { verificarToken } from "../middlewares/authMiddleware";
 import { cadastrarProduto } from "../controllers/produto/cadastrarProduto";
 import { listarProdutos } from "../controllers/produto/listarProduto";
 import { saidaProduto } from "../controllers/produto/saidaProduto";
 import { listarMovimentacao } from "../controllers/produto/listarMovimentacao";
-import { editarProduto } from "../controllers/produto/editarProduto";
-import { desativarProduto } from "../controllers/produto/desativarProduto";
+import { editarProduto, EditarProdutoParams, EditarProdutoBody } from "../controllers/produto/editarProduto";
+import { desativarProdutoMovimentacao, DesativarProdutoMovimentacaoParams, DesativarProdutoMovimentacaoBody } from "../controllers/produto/desativarProduto";
 import { relatorioVencimento } from "../controllers/produto/relatorioVencimento";
 import { relatorioEstoqueGeral } from "../controllers/produto/relatorioEstoqueGeral";
 
-const router = express.Router();
+export default async function produtoRoutes(app: FastifyInstance) {
+    app.addHook("preHandler", verificarToken);
 
-router.post("/cadastrar", cadastrarProduto);
-router.get("/produtos", listarProdutos);
-router.post("/saida", saidaProduto);
-router.get("/movimentacao", listarMovimentacao)
-router.put("/:id", editarProduto);
-router.patch("/movimentacao/:id", desativarProduto);
-router.get("/relatorio-vencimentos", relatorioVencimento);
-router.get("/relatorio-geral", relatorioEstoqueGeral);
+    app.post("/cadastrar", cadastrarProduto);
+    app.get("/produtos", listarProdutos);
+    app.post("/saida", saidaProduto);
+    app.get("/movimentacao", listarMovimentacao);
 
+    app.put<{
+        Params: EditarProdutoParams;
+        Body: EditarProdutoBody;
+    }>("/:id", editarProduto);
 
-export default router;
+    app.patch<{
+        Params: DesativarProdutoMovimentacaoParams;
+        Body: DesativarProdutoMovimentacaoBody;
+    }>("/movimentacao/:id", desativarProdutoMovimentacao);
+
+    app.get("/relatorio-vencimentos", relatorioVencimento);
+    app.get("/relatorio-geral", relatorioEstoqueGeral);
+}

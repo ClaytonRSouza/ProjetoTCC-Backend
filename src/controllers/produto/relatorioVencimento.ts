@@ -1,4 +1,5 @@
-import { RequestHandler } from "express";
+import { FastifyReply } from "fastify";
+import { AuthenticatedRequest } from "../../middlewares/authMiddleware";
 import { prisma } from "../../config/database";
 import { addMonths, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -10,7 +11,7 @@ interface ProdutoRelatorio {
     validade: string;
 }
 
-export const relatorioVencimento: RequestHandler = async (req, res) => {
+export const relatorioVencimento = async (request: AuthenticatedRequest, reply: FastifyReply) => {
     try {
         const dataAtual = new Date();
         const dataLimite = addMonths(dataAtual, 6);
@@ -50,9 +51,15 @@ export const relatorioVencimento: RequestHandler = async (req, res) => {
             });
         });
 
-        res.status(200).json({ relatorio: relatorioFormatado });
-    } catch (error) {
-        console.error("Erro ao buscar produtos com vencimento próximo:", error);
-        res.status(500).json({ error: "Erro interno do servidor" });
+        reply.status(200).send({ relatorio: relatorioFormatado });
+    } catch (error: unknown) {
+        if (error instanceof Error) {
+            console.error(error.message);
+            reply.status(500).send({ error: error.message });
+        } else {
+            console.error(error);
+            reply.status(500).send({ error: "Erro interno do servidor" });
+        }
     }
+
 };

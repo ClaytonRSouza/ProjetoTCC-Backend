@@ -1,36 +1,50 @@
-import { RequestHandler } from "express";
+import { FastifyReply } from "fastify";
+import { AuthenticatedRequest } from "../../middlewares/authMiddleware";
 import { prisma } from "../../config/database";
 import { Prisma } from "@prisma/client";
+import { ZodError } from "zod";
 
-export const listarMovimentacao: RequestHandler = async (req, res) => {
+export const listarMovimentacao = async (request: AuthenticatedRequest, reply: FastifyReply) => {
     try {
-        const { tipo, propriedadeId, dataInicio, dataFim, ordenacao } = req.query;
+        const { tipo, propriedadeId, dataInicio, dataFim, ordenacao } = request.query as {
+            tipo?: string;
+            propriedadeId?: string;
+            dataInicio?: string;
+            dataFim?: string;
+            ordenacao?: "asc" | "desc";
+        };
 
-        // Construção dos filtros
-        const filtros: Prisma.MovimentacaoWhereInput = {};
-
-        if (tipo && (tipo === "ENTRADA" || tipo === "SAIDA")) {
-            filtros.tipo = tipo;
+        if (!request.usuarioId) {
+            return reply.code(401).send({ error: "Usuário não autenticado corretamente." });
         }
 
-        if (propriedadeId) {
-            filtros.estoque = { propriedadeId: Number(propriedadeId) };
+        // Construção dos filtros
+        const filtros: Prisma.MovimentacaoWhereInput = {
+            estoque: {
+                propriedade: {
+                    usuarioId: request.usuarioId,
+                    ...(propriedadeId ? { id: Number(propriedadeId) } : {}),
+                },
+            },
+        };
+
+        if (tipo && (tipo === "ENTRADA" || tipo === "SAIDA" || tipo === "DESATIVACAO")) {
+            filtros.tipo = tipo;
         }
 
         if (dataInicio || dataFim) {
             filtros.data = {};
-            if (dataInicio) filtros.data.gte = new Date(dataInicio as string);
-            if (dataFim) filtros.data.lte = new Date(dataFim as string);
+            if (dataInicio) filtros.data.gte = new Date(dataInicio);
+            if (dataFim) filtros.data.lte = new Date(dataFim);
         }
 
-        // Correção da ordenação
         const orderBy: Prisma.MovimentacaoOrderByWithRelationInput = {
             data: ordenacao === "asc" || ordenacao === "desc" ? ordenacao : "desc",
         };
 
-        const movimentacao = await prisma.movimentacao.findMany({
+        const movimentacoes = await prisma.movimentacao.findMany({
             where: filtros,
-            orderBy, // Agora correto!
+            orderBy,
             include: {
                 estoque: {
                     include: {
@@ -41,9 +55,14 @@ export const listarMovimentacao: RequestHandler = async (req, res) => {
             },
         });
 
-        res.status(200).json(movimentacao);
-    } catch (error) {
-        console.error("Erro ao listar movimentações: ", error);
-        res.status(500).json({ error: "Erro interno do servidor" });
+        return reply.code(200).send(movimentacoes);
+    } catch (error: unknown) {
+        console.error("Erro ao listar movimentações:", error);
+
+        if (error instanceof ZodError) {
+            return reply.code(400).send({ error: "Dados inválidos", details: error.errors });
+        }
+
+        return reply.code(500).send({ error: "Erro interno do servidor" });
     }
 };

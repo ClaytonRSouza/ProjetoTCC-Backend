@@ -1,33 +1,30 @@
-import { RequestHandler } from "express";
+import { FastifyReply } from "fastify";
 import { prisma } from "../../config/database";
+import { AuthenticatedRequest } from "../../middlewares/authMiddleware";
 import { produtoDto } from "../../dtos/cadastroProdutoDto";
-import { isValid, parse } from "date-fns";
+import { parse, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-
-export const cadastrarProduto: RequestHandler = async (req, res) => {
+export const cadastrarProduto = async (request: AuthenticatedRequest, reply: FastifyReply) => {
     try {
-        const dados = produtoDto.parse(req.body);
+        const dados = produtoDto.parse(request.body);
         const dataValidade = parse(dados.validade, "dd/MM/yyyy", new Date(), { locale: ptBR });
 
         if (!isValid(dataValidade)) {
-            res.status(400).json({ error: "Data de validade incorreta" });
-            return;
+            return reply.code(400).send({ error: "Data de validade incorreta" });
         }
 
-        //verificando se a propriedade existe
-        const propriedade = await prisma.propriedade.findUnique({
-            where: { id: dados.propriedadeId }
-        })
+        const propriedade = await prisma.propriedade.findFirst({
+            where: {
+                id: dados.propriedadeId,
+                usuarioId: request.usuarioId // <-- Aqui usando o usuarioId validado
+            }
+        });
 
         if (!propriedade) {
-            res.status(404).json({ error: "Propriedade não encontrada" });
-            return;
+            return reply.code(404).send({ error: "Propriedade não encontrada" });
         }
 
-
-
-        //criando produto
         const produto = await prisma.produto.create({
             data: {
                 nome: dados.nome,
@@ -36,16 +33,14 @@ export const cadastrarProduto: RequestHandler = async (req, res) => {
             }
         });
 
-        //adicionando produto no estoque da propriedade
         const estoque = await prisma.estoque.create({
             data: {
                 quantidade: dados.quantidade,
                 produtoId: produto.id,
                 propriedadeId: dados.propriedadeId
             }
-        })
+        });
 
-        //movimentacao de entrada
         await prisma.movimentacao.create({
             data: {
                 estoqueId: estoque.id,
@@ -53,12 +48,12 @@ export const cadastrarProduto: RequestHandler = async (req, res) => {
                 quantidade: dados.quantidade,
                 produtoStatus: "ATIVO",
             }
-
         });
 
-        res.status(201).json({ produto, estoque });
+        return reply.code(201).send({ produto, estoque });
+
     } catch (error) {
-        console.error("Erro ao cadastrar produto: ", error);
-        res.status(500).json({ error: "Erro interno do servidor" });
+        console.error("Erro ao cadastrar produto:", error);
+        return reply.code(500).send({ error: "Erro interno do servidor" });
     }
-}
+};

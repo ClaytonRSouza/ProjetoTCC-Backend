@@ -1,12 +1,13 @@
-import { RequestHandler } from "express";
+import { FastifyReply, FastifyRequest } from "fastify";
 import { prisma } from "../../config/database";
 import { saidaProdutoDto } from "../../dtos/saidaProdutoDto";
+import { AuthenticatedRequest } from "../../middlewares/authMiddleware";
 
-export const saidaProduto: RequestHandler = async (req, res) => {
+export const saidaProduto = async (request: AuthenticatedRequest, reply: FastifyReply) => {
     try {
-        const dados = saidaProdutoDto.parse(req.body);
+        const dados = saidaProdutoDto.parse(request.body);
 
-        //verificando se o estoque existe
+        // Verificando se o estoque existe
         const estoque = await prisma.estoque.findFirst({
             where: {
                 produtoId: dados.produtoId,
@@ -15,22 +16,20 @@ export const saidaProduto: RequestHandler = async (req, res) => {
         });
 
         if (!estoque) {
-            res.status(404).json({ error: "Estoque não encontrado no estoque da propriedade" });
-            return;
+            return reply.code(404).send({ error: "Estoque não encontrado no estoque da propriedade" });
         }
 
         if (estoque.quantidade < dados.quantidade) {
-            res.status(400).json({ error: "Quantidade insuficiente no estoque" });
-            return;
+            return reply.code(400).send({ error: "Quantidade insuficiente no estoque" });
         }
 
-        //Atualizando a quantidade do estoque
+        // Atualizando a quantidade do estoque
         const atualizandoEstoque = await prisma.estoque.update({
             where: { id: estoque.id },
-            data: { quantidade: estoque.quantidade - dados.quantidade }
+            data: { quantidade: estoque.quantidade - dados.quantidade },
         });
 
-        //movimentacao de saida
+        // Movimentação de saída
         await prisma.movimentacao.create({
             data: {
                 estoqueId: estoque.id,
@@ -40,9 +39,12 @@ export const saidaProduto: RequestHandler = async (req, res) => {
             },
         });
 
-        res.status(200).json({ message: "Saída de produto realizada com sucesso", estoqueAtualizado: atualizandoEstoque });
+        return reply.code(200).send({
+            message: "Saída de produto realizada com sucesso",
+            estoqueAtualizado: atualizandoEstoque,
+        });
     } catch (error) {
         console.error("Erro ao registrar saída de produto: ", error);
-        res.status(500).json({ error: "Erro interno do servidor" });
+        return reply.code(500).send({ error: "Erro interno do servidor" });
     }
 };

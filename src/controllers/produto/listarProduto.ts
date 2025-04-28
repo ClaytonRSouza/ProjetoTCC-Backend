@@ -1,13 +1,13 @@
-import { RequestHandler } from "express";
+import { FastifyReply } from "fastify";
+import { AuthenticatedRequest } from "../../middlewares/authMiddleware";
 import { prisma } from "../../config/database";
 
-export const listarProdutos: RequestHandler = async (req, res) => {
+export const listarProdutos = async (request: AuthenticatedRequest, reply: FastifyReply) => {
     try {
-        const { propriedadeId } = req.query;
+        const { propriedadeId } = request.query as { propriedadeId?: string };
 
         if (!propriedadeId) {
-            res.status(400).json({ error: "PropriedadeId não informado" });
-            return;
+            return reply.code(400).send({ error: "PropriedadeId não informado" });
         }
 
         const produtos = await prisma.estoque.findMany({
@@ -15,9 +15,9 @@ export const listarProdutos: RequestHandler = async (req, res) => {
             include: { produto: true }
         });
 
-        res.status(200).json(produtos);
-    } catch (error) {
-        console.error("Erro ao listar produtos: ", error);
-        res.status(500).json({ error: "Erro interno do servidor" });
+        return reply.code(200).send(produtos);
+    } catch (error: unknown) {
+        console.error("Erro ao listar produtos:", error);
+        return reply.code(500).send({ error: "Erro interno do servidor" });
     }
-}
+};

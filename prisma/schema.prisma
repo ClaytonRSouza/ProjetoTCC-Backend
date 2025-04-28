@@ -36,6 +36,7 @@ enum Embalagem {
 enum TipoMovimentacao {
   ENTRADA
   SAIDA
+  DESATIVACAO
   AJUSTE
 }
 

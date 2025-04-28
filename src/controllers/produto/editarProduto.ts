@@ -1,23 +1,44 @@
-import { RequestHandler } from "express";
+import { FastifyRequest, FastifyReply } from "fastify";
 import { prisma } from "../../config/database";
 import { editarProdutoDto } from "../../dtos/editarProdutoDto";
 import { parse } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { AuthenticatedRequest } from "../../middlewares/authMiddleware";
+import { ZodError } from "zod";
 
+export interface EditarProdutoParams {
+    id: string;
+}
 
-export const editarProduto: RequestHandler = async (req, res) => {
+export interface EditarProdutoBody {
+    nome: string;
+    embalagem: string;
+    validade?: string;
+}
+
+export const editarProduto = async (
+    request: AuthenticatedRequest<{
+        Params: EditarProdutoParams;
+        Body: EditarProdutoBody;
+    }>,
+    reply: FastifyReply
+) => {
     try {
-        const produtoId = Number(req.params.id);
-        const dados = editarProdutoDto.parse(req.body);
+        const produtoId = Number(request.params.id);
+        const dados = editarProdutoDto.parse(request.body);
 
-        //verificar se o produto existe
-        const produtoExistente = await prisma.produto.findUnique({ where: { id: produtoId } });
-        if (!produtoExistente) {
-            res.status(404).json({ error: "Produto não encontrado" });
-            return;
+        if (isNaN(produtoId)) {
+            return reply.code(400).send({ error: "ID do produto inválido." });
         }
 
-        //atualizar o produto
+        const produtoExistente = await prisma.produto.findUnique({
+            where: { id: produtoId }
+        });
+
+        if (!produtoExistente) {
+            return reply.code(404).send({ error: "Produto não encontrado" });
+        }
+
         const produtoAtualizado = await prisma.produto.update({
             where: { id: produtoId },
             data: {
@@ -25,13 +46,21 @@ export const editarProduto: RequestHandler = async (req, res) => {
                 embalagem: dados.embalagem,
                 validade: dados.validade
                     ? parse(dados.validade, "dd/MM/yyyy", new Date(), { locale: ptBR })
-                    : produtoExistente?.validade,
+                    : produtoExistente.validade,
             }
         });
 
-        res.status(200).json({ message: "Produto atualizado com sucesso", produto: produtoAtualizado });
-    } catch (error) {
-        console.error("Erro ao editar produto: ", error);
-        res.status(500).json({ error: "Erro interno do servidor" });
+        return reply.code(200).send({
+            message: "Produto atualizado com sucesso",
+            produto: produtoAtualizado
+        });
+    } catch (error: unknown) {
+        console.error("Erro ao editar produto:", error);
+
+        if (error instanceof ZodError) {
+            return reply.code(400).send({ error: "Dados inválidos na requisição", details: error.errors });
+        }
+
+        return reply.code(500).send({ error: "Erro interno do servidor" });
     }
 };

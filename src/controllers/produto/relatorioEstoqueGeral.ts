@@ -1,4 +1,5 @@
-import { RequestHandler } from "express";
+import { FastifyReply } from "fastify";
+import { AuthenticatedRequest } from "../../middlewares/authMiddleware";
 import { prisma } from "../../config/database";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -10,11 +11,16 @@ interface ProdutoRelatorio {
     embalagem: string;
 }
 
-export const relatorioEstoqueGeral: RequestHandler = async (req, res) => {
+export const relatorioEstoqueGeral = async (request: AuthenticatedRequest, reply: FastifyReply) => {
     try {
         const produtos = await prisma.produto.findMany({
             include: {
                 estoque: {
+                    where: {
+                        quantidade: {
+                            gt: 0,
+                        },
+                    },
                     include: {
                         propriedade: true,
                     },
@@ -45,9 +51,9 @@ export const relatorioEstoqueGeral: RequestHandler = async (req, res) => {
             });
         });
 
-        res.status(200).json({ relatorio: relatorioPorPropriedade });
-    } catch (error) {
+        return reply.code(200).send({ relatorio: relatorioPorPropriedade });
+    } catch (error: unknown) {
         console.error("Erro ao gerar relatório geral de estoque:", error);
-        res.status(500).json({ error: "Erro interno do servidor" });
+        return reply.code(500).send({ error: "Erro interno do servidor" });
     }
 };
