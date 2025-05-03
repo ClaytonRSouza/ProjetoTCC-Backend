@@ -7,7 +7,8 @@ import { AuthenticatedRequest } from "../../middlewares/authMiddleware";
 import { ZodError } from "zod";
 
 export interface EditarProdutoParams {
-    id: string;
+    produtoId: string;
+    propriedadeId: string;
 }
 
 export interface EditarProdutoBody {
@@ -24,7 +25,8 @@ export const editarProduto = async (
     reply: FastifyReply
 ) => {
     try {
-        const produtoId = Number(request.params.id);
+        const produtoId = Number(request.params.produtoId);
+        const propriedadeId = Number(request.params.propriedadeId);
         const dados = editarProdutoDto.parse(request.body);
 
         if (isNaN(produtoId)) {
@@ -37,6 +39,21 @@ export const editarProduto = async (
 
         if (!produtoExistente) {
             return reply.code(404).send({ error: "Produto não encontrado" });
+        }
+
+        const estoqueDoProduto = await prisma.estoque.findFirst({
+            where: {
+                produtoId,
+                propriedadeId,
+                propriedade: {
+                    usuarioId: request.usuarioId
+                }
+            },
+            include: { propriedade: true },
+        });
+
+        if (!estoqueDoProduto || estoqueDoProduto.propriedade.usuarioId !== request.usuarioId) {
+            return reply.code(403).send({ error: "Acesso negado. Você não tem permissão para editar este produto." });
         }
 
         const produtoAtualizado = await prisma.produto.update({

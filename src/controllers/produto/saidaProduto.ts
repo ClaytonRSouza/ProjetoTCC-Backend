@@ -12,6 +12,9 @@ export const saidaProduto = async (request: AuthenticatedRequest, reply: Fastify
             where: {
                 produtoId: dados.produtoId,
                 propriedadeId: dados.propriedadeId,
+                propriedade: {
+                    usuarioId: request.usuarioId,
+                }
             },
         });
 

@@ -13,12 +13,18 @@ interface ProdutoRelatorio {
 
 export const relatorioEstoqueGeral = async (request: AuthenticatedRequest, reply: FastifyReply) => {
     try {
+        const { propriedadeId } = request.query as { propriedadeId?: string };
+
         const produtos = await prisma.produto.findMany({
             include: {
                 estoque: {
                     where: {
                         quantidade: {
                             gt: 0,
+                        },
+                        ...(propriedadeId ? { propriedadeId: Number(propriedadeId) } : {}),
+                        propriedade: {
+                            usuarioId: request.usuarioId,
                         },
                     },
                     include: {

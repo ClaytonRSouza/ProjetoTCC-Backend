@@ -5,7 +5,8 @@ import { AuthenticatedRequest } from "../../middlewares/authMiddleware";
 import { TipoMovimentacao } from "@prisma/client";
 
 export interface DesativarProdutoMovimentacaoParams {
-    id: string;
+    movimentacaoId: string;
+    propriedadeId: string;
 }
 
 export interface DesativarProdutoMovimentacaoBody {
@@ -20,15 +21,16 @@ export const desativarProdutoMovimentacao = async (
     reply: FastifyReply
 ) => {
     try {
-        const movimentacaoId = Number(request.params.id);
+        const movimentacaoId = Number(request.params.movimentacaoId);
+        const propriedadeId = Number(request.params.propriedadeId);
         const { justificativa } = desativarProdutoDto.parse(request.body);
 
-        if (isNaN(movimentacaoId)) {
-            return reply.code(400).send({ error: "ID da movimentação inválido." });
+        if (isNaN(movimentacaoId) || isNaN(propriedadeId)) {
+            return reply.code(400).send({ error: "IDs inválidos." });
         }
 
         if (!request.usuarioId) {
-            return reply.code(401).send({ error: "Usuário não autenticado corretamente." });
+            return reply.code(401).send({ error: "Usuário não autenticado." });
         }
 
         const resultado = await prisma.$transaction(async (tx) => {
@@ -43,21 +45,13 @@ export const desativarProdutoMovimentacao = async (
                 }
             });
 
-            if (!movimentacao) {
-                throw new Error("MOVIMENTACAO_NAO_ENCONTRADA");
-            }
-
-            if (movimentacao.tipo !== TipoMovimentacao.ENTRADA) {
-                throw new Error("TIPO_INVALIDO");
-            }
-
-            if (!movimentacao.estoque || !movimentacao.estoque.propriedade) {
-                throw new Error("INTEGRIDADE_DADOS");
-            }
-
-            if (movimentacao.estoque.propriedade.usuarioId !== request.usuarioId) {
-                throw new Error("PERMISSAO_NEGADA");
-            }
+            if (!movimentacao) throw new Error("MOVIMENTACAO_NAO_ENCONTRADA");
+            if (movimentacao.tipo !== TipoMovimentacao.ENTRADA) throw new Error("TIPO_INVALIDO");
+            if (!movimentacao.estoque || !movimentacao.estoque.propriedade) throw new Error("INTEGRIDADE_DADOS");
+            if (movimentacao.estoque.propriedade.id !== propriedadeId) throw new Error("PROPRIEDADE_INCORRETA");
+            if (movimentacao.estoque.propriedade.usuarioId !== request.usuarioId) throw new Error("PERMISSAO_NEGADA");
+            if (movimentacao.produtoStatus === "DESATIVADO") throw new Error("JA_DESATIVADO");
+            if (movimentacao.estoque.quantidade === 0) throw new Error("ESTOQUE_JA_ZERADO");
 
             const estoqueAtualizado = await tx.estoque.update({
                 where: { id: movimentacao.estoque.id },
@@ -70,7 +64,7 @@ export const desativarProdutoMovimentacao = async (
                     tipo: TipoMovimentacao.DESATIVACAO,
                     quantidade: movimentacao.quantidade,
                     produtoStatus: "DESATIVADO",
-                    justificativa: justificativa,
+                    justificativa,
                 }
             });
 
@@ -83,7 +77,7 @@ export const desativarProdutoMovimentacao = async (
         });
 
         return reply.code(200).send({
-            message: "Produto desativado com sucesso (Estoque zerado e movimentação registrada)",
+            message: "Produto desativado com sucesso.",
             estoqueAtualizado: resultado.estoqueAtualizado,
             movimentacaoDesativacao: resultado.movDesativacao,
         });
@@ -91,22 +85,21 @@ export const desativarProdutoMovimentacao = async (
     } catch (error: any) {
         console.error("Erro ao desativar produto:", error);
 
-        if (error.message === "MOVIMENTACAO_NAO_ENCONTRADA") {
-            return reply.code(404).send({ error: "Movimentação não encontrada" });
-        }
-        if (error.message === "TIPO_INVALIDO") {
-            return reply.code(400).send({ error: "Apenas movimentações de ENTRADA podem ser desativadas desta forma" });
-        }
-        if (error.message === "INTEGRIDADE_DADOS") {
-            return reply.code(500).send({ error: "Erro de integridade nos dados relacionados." });
-        }
-        if (error.message === "PERMISSAO_NEGADA") {
-            return reply.code(403).send({ error: "Permissão negada. Você não tem acesso a este recurso." });
-        }
-        if (error.name === 'ZodError') {
-            return reply.code(400).send({ error: "Dados inválidos na requisição", details: error.errors });
+        const mensagens = {
+            MOVIMENTACAO_NAO_ENCONTRADA: [404, "Movimentação não encontrada"],
+            TIPO_INVALIDO: [400, "Apenas movimentações de ENTRADA podem ser desativadas"],
+            INTEGRIDADE_DADOS: [500, "Erro de integridade nos dados relacionados."],
+            PROPRIEDADE_INCORRETA: [400, "A movimentação não pertence à propriedade informada."],
+            PERMISSAO_NEGADA: [403, "Permissão negada. Você não tem acesso a este recurso."],
+            JA_DESATIVADO: [400, "Movimentação já foi desativada anteriormente."],
+            ESTOQUE_JA_ZERADO: [400, "Estoque já está zerado para este produto."]
+        };
+
+        if (error.name === "ZodError") {
+            return reply.code(400).send({ error: "Dados inválidos", details: error.errors });
         }
 
         return reply.code(500).send({ error: "Erro interno do servidor" });
     }
 };
+
