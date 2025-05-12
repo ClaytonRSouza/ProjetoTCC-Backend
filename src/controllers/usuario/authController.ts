@@ -43,9 +43,19 @@ export const loginUser = async (request: FastifyRequest, reply: FastifyReply) =>
 
         const token = await user.getIdToken();
 
-        reply.send({ token });
+        // busca no banco o nome do usuário pelo UID
+        const usuario = await prisma.usuario.findUnique({
+            where: { firebaseUid: user.uid },
+            select: { nome: true }
+        });
+
+        if (!usuario) {
+            return reply.status(404).send({ error: 'Usuário não encontrado no banco.' });
+        }
+
+        reply.send({ token, nome: usuario.nome });
     } catch (error) {
-        reply.status(401).send({ error: "Credenciais inválidas" });
+        reply.status(401).send({ error: 'Credenciais inválidas' });
     }
 };
 
