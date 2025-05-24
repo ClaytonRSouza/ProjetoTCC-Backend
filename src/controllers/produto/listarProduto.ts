@@ -30,10 +30,19 @@ export const listarProdutosPorPropriedade = async (
         const estoque = await prisma.estoque.findMany({
             where: {
                 propriedadeId: propriedadeId,
-                quantidade: { gt: 0 }, // apenas produtos com estoque disponível
+                quantidade: { gt: 0 },
             },
             include: {
                 produto: true,
+                movimentacoes: {
+                    where: {
+                        tipo: 'ENTRADA',
+                    },
+                    orderBy: {
+                        data: 'desc',
+                    },
+                    take: 1,
+                },
             },
         });
 
@@ -42,9 +51,11 @@ export const listarProdutosPorPropriedade = async (
             idProduto: item.produto.id,
             nome: item.produto.nome,
             embalagem: item.produto.embalagem,
-            validade: format(item.produto.validade, "dd/MM/yyyy", { locale: ptBR }),
+            validade: format(item.produto.validade, 'dd/MM/yyyy', { locale: ptBR }),
             quantidade: item.quantidade,
+            movimentacaoId: item.movimentacoes[0]?.id ?? null, // necessário para desativação
         }));
+
 
         return reply.code(200).send({ produtos });
     } catch (error) {

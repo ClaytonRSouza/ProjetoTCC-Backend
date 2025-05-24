@@ -14,28 +14,20 @@ interface MovimentacaoRelatorio {
 
 export const relatorioMovimentacoes = async (request: AuthenticatedRequest, reply: FastifyReply) => {
     try {
-        const { tipo } = request.query as { tipo?: "ENTRADA" | "SAIDA" };
+        const { tipo, propriedadeId } = request.query as { tipo?: "ENTRADA" | "SAIDA"; propriedadeId?: string };
 
         const movimentacoes = await prisma.movimentacao.findMany({
             where: {
                 ...(tipo ? { tipo } : {}),
                 estoque: {
-                    propriedade: {
-                        usuarioId: request.usuarioId,
-                    },
+                    ...(propriedadeId ? { propriedadeId: Number(propriedadeId) } : {}),
+                    propriedade: { usuarioId: request.usuarioId },
                 },
             },
             include: {
-                estoque: {
-                    include: {
-                        produto: true,
-                        propriedade: true,
-                    },
-                },
+                estoque: { include: { produto: true, propriedade: true } },
             },
-            orderBy: {
-                data: "desc",
-            },
+            orderBy: { data: "desc" },
         });
 
         const relatorio: MovimentacaoRelatorio[] = movimentacoes.map((movimentacao) => ({
