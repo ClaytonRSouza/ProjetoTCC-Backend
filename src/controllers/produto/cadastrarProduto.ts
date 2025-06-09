@@ -9,15 +9,15 @@ export const cadastrarProduto = async (request: AuthenticatedRequest, reply: Fas
     try {
         const dados = produtoDto.parse(request.body);
         const dataValidade = parse(dados.validade, "dd/MM/yyyy", new Date(), { locale: ptBR });
-
         if (!isValid(dataValidade)) {
             return reply.code(400).send({ error: "Data de validade incorreta" });
         }
 
+        // Verifica se a propriedade está correta, conforme o id do usuário
         const propriedade = await prisma.propriedade.findFirst({
             where: {
                 id: dados.propriedadeId,
-                usuarioId: request.usuarioId // <-- Aqui usando o usuarioId validado
+                usuarioId: request.usuarioId
             }
         });
 
@@ -25,30 +25,80 @@ export const cadastrarProduto = async (request: AuthenticatedRequest, reply: Fas
             return reply.code(404).send({ error: "Propriedade não encontrada" });
         }
 
-        const produto = await prisma.produto.create({
-            data: {
-                nome: dados.nome,
-                embalagem: dados.embalagem,
-                validade: dataValidade
+        // Verifica se o produto já existe (mesmo nome, validade e embalagem)
+        const produtoExistente = await prisma.produto.findFirst({
+            where: {
+                nome: { equals: dados.nome, mode: "insensitive" },
+                validade: dataValidade,
+                embalagem: dados.embalagem
             }
         });
 
-        const estoque = await prisma.estoque.create({
-            data: {
-                quantidade: dados.quantidade,
-                produtoId: produto.id,
+        let produtoId: number;
+        let produto;
+
+        if (produtoExistente) {
+            produtoId = produtoExistente.id;
+            produto = produtoExistente;
+        } else {
+            const novoProduto = await prisma.produto.create({
+                data: {
+                    nome: dados.nome,
+                    validade: dataValidade,
+                    embalagem: dados.embalagem
+                }
+            });
+            produtoId = novoProduto.id;
+            produto = novoProduto;
+        }
+
+        // Verifica se já existe estoque desse produto nessa propriedade
+        const estoqueExistente = await prisma.estoque.findFirst({
+            where: {
+                produtoId,
                 propriedadeId: dados.propriedadeId
             }
         });
 
-        await prisma.movimentacao.create({
-            data: {
-                estoqueId: estoque.id,
-                tipo: "ENTRADA",
-                quantidade: dados.quantidade,
-                produtoStatus: "ATIVO",
-            }
-        });
+        let estoque;
+
+        if (estoqueExistente) {
+            // Atualiza a quantidade no estoque existente
+            estoque = await prisma.estoque.update({
+                where: { id: estoqueExistente.id },
+                data: {
+                    quantidade: { increment: dados.quantidade }
+                }
+            });
+
+            // Gera nova movimentação de entrada
+            await prisma.movimentacao.create({
+                data: {
+                    estoqueId: estoque.id,
+                    tipo: "ENTRADA",
+                    quantidade: dados.quantidade,
+                    produtoStatus: "ATIVO"
+                }
+            });
+        } else {
+            // Cria novo estoque
+            estoque = await prisma.estoque.create({
+                data: {
+                    quantidade: dados.quantidade,
+                    produtoId,
+                    propriedadeId: dados.propriedadeId
+                }
+            });
+
+            await prisma.movimentacao.create({
+                data: {
+                    estoqueId: estoque.id,
+                    tipo: "ENTRADA",
+                    quantidade: dados.quantidade,
+                    produtoStatus: "ATIVO"
+                }
+            });
+        }
 
         return reply.code(201).send({ produto, estoque });
 

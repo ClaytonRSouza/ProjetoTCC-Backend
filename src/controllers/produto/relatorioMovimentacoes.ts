@@ -10,6 +10,7 @@ interface MovimentacaoRelatorio {
     data: string;
     produtoNome: string;
     propriedadeNome: string;
+    embalagem: string;
 }
 
 export const relatorioMovimentacoes = async (request: AuthenticatedRequest, reply: FastifyReply) => {
@@ -37,6 +38,7 @@ export const relatorioMovimentacoes = async (request: AuthenticatedRequest, repl
             produtoId: movimentacao.estoque?.produto?.id || "Produto não encontrado",
             produtoNome: movimentacao.estoque?.produto?.nome || "Produto não encontrado",
             propriedadeNome: movimentacao.estoque?.propriedade?.nome || "Propriedade não encontrada",
+            embalagem: movimentacao.estoque?.produto?.embalagem || "Embalagem não encontrada",
             movimentacaoId: movimentacao.id,
             justificativa: movimentacao.justificativa || "Nenhuma justificativa",
         }));

@@ -54,6 +54,7 @@ export const listarProdutosProxVenc = async (
                 nome: prod.nome,
                 validade: format(prod.validade!, "dd/MM/yyyy", { locale: ptBR }),
                 vencido: isBefore(prod.validade!, hoje),
+                embalagem: prod.embalagem,
                 propriedades: prod.estoque.map((e) => ({
                     propriedade: e.propriedade.nome,
                     quantidade: e.quantidade,
