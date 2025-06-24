@@ -4,9 +4,6 @@ import produtoRoutes from "./routes/produtoRoutes";
 
 const app = Fastify();
 
-// Registra plugins se quiser CORS, JWT, etc.
-// Exemplo: await app.register(cors, { origin: '*' });
-
 app.register(authRoutes, { prefix: "/auth" });
 app.register(produtoRoutes, { prefix: "/produto" });
 

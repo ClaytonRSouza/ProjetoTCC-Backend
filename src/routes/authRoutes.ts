@@ -11,7 +11,7 @@ export default async function authRoutes(app: FastifyInstance) {
     //público
     app.post("/register", registerUser);
     app.post("/login", loginUser);
-    app.post("/auth/solicitar-reset-senha", solicitarResetSenha);
+    app.post("/solicitar-reset-senha", solicitarResetSenha);
 
     //privadas
     app.put("/change-password", { preHandler: [verificarToken] }, changePassword);
