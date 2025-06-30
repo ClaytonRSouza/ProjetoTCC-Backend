@@ -4,6 +4,7 @@ import { AuthenticatedRequest } from "../../middlewares/authMiddleware";
 import { produtoDto } from "../../dtos/cadastroProdutoDto";
 import { parse, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { ZodError } from "zod";
 
 export const cadastrarProduto = async (request: AuthenticatedRequest, reply: FastifyReply) => {
     try {
@@ -103,6 +104,14 @@ export const cadastrarProduto = async (request: AuthenticatedRequest, reply: Fas
         return reply.code(201).send({ produto, estoque });
 
     } catch (error) {
+        if (error instanceof ZodError) {
+            const erros = error.errors.map((err) => ({
+                campo: err.path.join('.'),
+                mensagem: err.message,
+            }));
+            return reply.code(400).send({ erros });
+        }
+
         console.error("Erro ao cadastrar produto:", error);
         return reply.code(500).send({ error: "Erro interno do servidor" });
     }

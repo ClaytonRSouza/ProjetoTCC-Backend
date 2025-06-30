@@ -3,6 +3,7 @@ import { prisma } from "../../config/database";
 import { desativarProdutoDto } from "../../dtos/desativarProdutoDto";
 import { AuthenticatedRequest } from "../../middlewares/authMiddleware";
 import { TipoMovimentacao } from "@prisma/client";
+import { ZodError } from "zod";
 
 export interface DesativarProdutoMovimentacaoParams {
     movimentacaoId: string;
@@ -82,23 +83,16 @@ export const desativarProdutoMovimentacao = async (
             movimentacaoDesativacao: resultado.movDesativacao,
         });
 
-    } catch (error: any) {
-        console.error("Erro ao desativar produto:", error);
-
-        const mensagens = {
-            MOVIMENTACAO_NAO_ENCONTRADA: [404, "Movimentação não encontrada"],
-            TIPO_INVALIDO: [400, "Apenas movimentações de ENTRADA podem ser desativadas"],
-            INTEGRIDADE_DADOS: [500, "Erro de integridade nos dados relacionados."],
-            PROPRIEDADE_INCORRETA: [400, "A movimentação não pertence à propriedade informada."],
-            PERMISSAO_NEGADA: [403, "Permissão negada. Você não tem acesso a este recurso."],
-            JA_DESATIVADO: [400, "Movimentação já foi desativada anteriormente."],
-            ESTOQUE_JA_ZERADO: [400, "Estoque já está zerado para este produto."]
-        };
-
-        if (error.name === "ZodError") {
-            return reply.code(400).send({ error: "Dados inválidos", details: error.errors });
+    } catch (error) {
+        if (error instanceof ZodError) {
+            const erros = error.errors.map((err) => ({
+                campo: err.path.join('.'),
+                mensagem: err.message,
+            }));
+            return reply.code(400).send({ erros });
         }
 
+        console.error("Erro ao desativar produto:", error);
         return reply.code(500).send({ error: "Erro interno do servidor" });
     }
 };

@@ -59,33 +59,3 @@ export const loginUser = async (request: FastifyRequest, reply: FastifyReply) =>
     }
 };
 
-// Alteração de senha do usuário
-export const changePassword = async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-        console.log("Requisição recebida para alterar senha");
-
-        const { newPassword } = request.body as { newPassword: string };
-        const authorizationHeader = request.headers.authorization;
-
-        if (!authorizationHeader) {
-            console.log("Nenhum token foi enviado");
-            reply.status(401).send({ error: "Token não fornecido" });
-            return;
-        }
-
-        const token = authorizationHeader.split(" ")[1];
-
-        console.log("Token recebido:", token);
-
-        const decodedToken = await admin.auth().verifyIdToken(token);
-        console.log("Token decodificado. UID:", decodedToken.uid);
-
-        await admin.auth().updateUser(decodedToken.uid, { password: newPassword });
-
-        console.log("Senha alterada com sucesso!");
-        reply.send({ message: "Senha alterada com sucesso!" });
-    } catch (error) {
-        console.error("Erro ao alterar senha:", error);
-        reply.status(500).send({ error: "Erro ao alterar senha" });
-    }
-};

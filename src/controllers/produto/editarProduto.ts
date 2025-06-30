@@ -71,13 +71,16 @@ export const editarProduto = async (
             message: "Produto atualizado com sucesso",
             produto: produtoAtualizado
         });
-    } catch (error: unknown) {
-        console.error("Erro ao editar produto:", error);
-
+    } catch (error) {
         if (error instanceof ZodError) {
-            return reply.code(400).send({ error: "Dados inválidos na requisição", details: error.errors });
+            const erros = error.errors.map((err) => ({
+                campo: err.path.join('.'),
+                mensagem: err.message,
+            }));
+            return reply.code(400).send({ erros });
         }
 
+        console.error("Erro ao editar produto:", error);
         return reply.code(500).send({ error: "Erro interno do servidor" });
     }
 };
