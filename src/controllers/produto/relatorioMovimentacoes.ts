@@ -17,6 +17,7 @@ export const relatorioMovimentacoes = async (request: AuthenticatedRequest, repl
     try {
         const { tipo, propriedadeId } = request.query as { tipo?: "ENTRADA" | "SAIDA"; propriedadeId?: string };
 
+        //consulta as movimentações de estoque
         const movimentacoes = await prisma.movimentacao.findMany({
             where: {
                 ...(tipo ? { tipo } : {}),
@@ -31,6 +32,7 @@ export const relatorioMovimentacoes = async (request: AuthenticatedRequest, repl
             orderBy: { data: "desc" },
         });
 
+        //cria um array com os dados do relatório
         const relatorio: MovimentacaoRelatorio[] = movimentacoes.map((movimentacao) => ({
             tipo: movimentacao.tipo,
             quantidade: movimentacao.quantidade,

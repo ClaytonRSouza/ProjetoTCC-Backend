@@ -14,8 +14,9 @@ export const listarProdutosProxVenc = async (
         }
 
         const hoje = new Date();
-        const limite = addMonths(hoje, 6);
+        const limite = addMonths(hoje, 6); //determina o limite de 6 meses que defini
 
+        //consulta os produtos que vencem até 6 meses
         const produtos = await prisma.produto.findMany({
             where: {
                 validade: {
@@ -48,6 +49,7 @@ export const listarProdutosProxVenc = async (
             },
         });
 
+        //retorna os dados necessarios formatados
         return reply.code(200).send({
             produtos: produtos.map((prod) => ({
                 id: prod.id,

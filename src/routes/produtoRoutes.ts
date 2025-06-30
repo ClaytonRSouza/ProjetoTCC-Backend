@@ -11,31 +11,27 @@ import { relatorioMovimentacoes } from "../controllers/produto/relatorioMoviment
 import { listarProdutosProxVenc } from "../controllers/produto/listarProdutoProxVenc";
 
 export default async function produtoRoutes(app: FastifyInstance) {
+    //hook global para verificar o token
     app.addHook("preHandler", verificarToken);
 
     app.post("/cadastrar", cadastrarProduto);
-
     app.get<{
         Params: { propriedadeId: string };
     }>("/:propriedadeId", listarProdutosPorPropriedade);
-
     app.post("/saida", saidaProduto);
-
     app.get("/movimentacao", listarMovimentacao);
-
     app.put<{
         Params: EditarProdutoParams;
         Body: EditarProdutoBody;
     }>("/:propriedadeId/:produtoId", editarProduto);
-
     app.patch<{
         Params: DesativarProdutoMovimentacaoParams;
         Body: DesativarProdutoMovimentacaoBody;
     }>("/movimentacao/:movimentacaoId/:propriedadeId", desativarProdutoMovimentacao);
 
+
+    //relatórios e consultas
     app.get("/alertas-vencimento", listarProdutosProxVenc);
-
     app.get("/relatorio-geral", relatorioEstoqueGeral);
-
     app.get("/relatorio-movimentacoes", relatorioMovimentacoes);
 }

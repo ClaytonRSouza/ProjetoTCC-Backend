@@ -4,6 +4,7 @@ import produtoRoutes from "./routes/produtoRoutes";
 
 const app = Fastify();
 
+// Registra as rotas
 app.register(authRoutes, { prefix: "/auth" });
 app.register(produtoRoutes, { prefix: "/produto" });
 

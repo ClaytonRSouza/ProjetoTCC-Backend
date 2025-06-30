@@ -10,12 +10,14 @@ export const registerUser = async (request: FastifyRequest, reply: FastifyReply)
     try {
         const dados = usuarioDto.parse(request.body);
 
+        // Verifica se o usuário já existe
         const firebaseUser = await admin.auth().createUser({
             email: dados.email,
             password: dados.senha,
             displayName: dados.nome,
         });
 
+        // Cria o usuário no banco de dados
         await prisma.usuario.create({
             data: {
                 firebaseUid: firebaseUser.uid,

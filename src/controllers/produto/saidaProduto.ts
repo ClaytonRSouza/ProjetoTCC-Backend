@@ -7,7 +7,7 @@ export const saidaProduto = async (request: AuthenticatedRequest, reply: Fastify
     try {
         const dados = saidaProdutoDto.parse(request.body);
 
-        // Verificando se o estoque existe
+        // Verificando se o produto existe
         const estoque = await prisma.estoque.findFirst({
             where: {
                 produtoId: dados.produtoId,

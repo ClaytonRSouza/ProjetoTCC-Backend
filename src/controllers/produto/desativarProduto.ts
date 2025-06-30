@@ -46,6 +46,7 @@ export const desativarProdutoMovimentacao = async (
                 }
             });
 
+            //validações padrões
             if (!movimentacao) throw new Error("MOVIMENTACAO_NAO_ENCONTRADA");
             if (movimentacao.tipo !== TipoMovimentacao.ENTRADA) throw new Error("TIPO_INVALIDO");
             if (!movimentacao.estoque || !movimentacao.estoque.propriedade) throw new Error("INTEGRIDADE_DADOS");
@@ -54,11 +55,13 @@ export const desativarProdutoMovimentacao = async (
             if (movimentacao.produtoStatus === "DESATIVADO") throw new Error("JA_DESATIVADO");
             if (movimentacao.estoque.quantidade === 0) throw new Error("ESTOQUE_JA_ZERADO");
 
+            //atualiza o estoque
             const estoqueAtualizado = await tx.estoque.update({
                 where: { id: movimentacao.estoque.id },
                 data: { quantidade: 0 }
             });
 
+            //atualiza o status da movimentação
             const movDesativacao = await tx.movimentacao.create({
                 data: {
                     estoqueId: estoqueAtualizado.id,

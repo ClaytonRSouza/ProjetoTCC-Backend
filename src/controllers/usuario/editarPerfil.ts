@@ -10,12 +10,14 @@ interface EditarPerfilBody {
 
 export const editarPerfil = async (request: AuthenticatedRequest, reply: FastifyReply) => {
     try {
+        // Verifica se o usuário está autenticado 
         const { nome, email } = (request.body as EditarPerfilBody) ?? {};
 
         if (!request.usuarioId) {
             return reply.status(401).send({ error: "Usuário não autenticado." });
         }
 
+        // Verifica se o usuário existe
         const usuario = await prisma.usuario.findUnique({
             where: { id: request.usuarioId },
         });
@@ -24,6 +26,7 @@ export const editarPerfil = async (request: AuthenticatedRequest, reply: Fastify
             return reply.status(404).send({ error: "Usuário não encontrado." });
         }
 
+        // Atualiza o perfil do usuário
         const usuarioAtualizado = await prisma.usuario.update({
             where: { id: usuario.id },
             data: {
@@ -32,6 +35,7 @@ export const editarPerfil = async (request: AuthenticatedRequest, reply: Fastify
             },
         });
 
+        //// Atualiza o email do usuário no Firebase
         if (email && email !== usuario.email) {
             await admin.auth().updateUser(usuario.firebaseUid, { email });
         }

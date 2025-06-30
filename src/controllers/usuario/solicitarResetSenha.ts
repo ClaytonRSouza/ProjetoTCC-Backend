@@ -6,6 +6,7 @@ const emailSchema = z.object({
     email: z.string().email("E-mail inválido"),
 });
 
+//função está em fase de testes, devido a biblioteca do firebase
 export const solicitarResetSenha = async (request: FastifyRequest, reply: FastifyReply) => {
     try {
         const { email } = request.body as { email: string };

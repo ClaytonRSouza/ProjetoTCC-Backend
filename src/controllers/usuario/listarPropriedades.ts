@@ -7,10 +7,12 @@ export const listarPropriedades = async (
     reply: FastifyReply
 ) => {
     try {
+        // Verifica se o usuário esta autenticado
         if (!request.usuarioId) {
             return reply.code(401).send({ error: "Usuário não autenticado corretamente." });
         }
 
+        // Busca as propriedades do usuário
         const propriedades = await prisma.propriedade.findMany({
             where: {
                 usuarioId: request.usuarioId,

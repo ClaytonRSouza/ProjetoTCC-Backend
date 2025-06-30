@@ -41,6 +41,7 @@ export const editarProduto = async (
             return reply.code(404).send({ error: "Produto não encontrado" });
         }
 
+        //escontra o produto selecionado no estoque
         const estoqueDoProduto = await prisma.estoque.findFirst({
             where: {
                 produtoId,
@@ -56,6 +57,7 @@ export const editarProduto = async (
             return reply.code(403).send({ error: "Acesso negado. Você não tem permissão para editar este produto." });
         }
 
+        //atualiza o produto 
         const produtoAtualizado = await prisma.produto.update({
             where: { id: produtoId },
             data: {

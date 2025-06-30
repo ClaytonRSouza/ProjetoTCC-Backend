@@ -15,6 +15,7 @@ export const relatorioEstoqueGeral = async (request: AuthenticatedRequest, reply
     try {
         const { propriedadeId } = request.query as { propriedadeId?: string };
 
+        //consulta os produtos com estoque e agrupa por propriedade
         const produtos = await prisma.produto.findMany({
             include: {
                 estoque: {
@@ -35,7 +36,7 @@ export const relatorioEstoqueGeral = async (request: AuthenticatedRequest, reply
         });
 
         const relatorioPorPropriedade: Record<string, ProdutoRelatorio[]> = {};
-
+        //cria um objeto com os produtos agrupados por propriedade
         produtos.forEach((produto) => {
             produto.estoque.forEach((estoque) => {
                 if (!estoque.propriedade) return;

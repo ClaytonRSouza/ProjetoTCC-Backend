@@ -19,6 +19,7 @@ export const listarProdutosPorPropriedade = async (
             return reply.code(401).send({ error: "Usuário não autenticado corretamente." });
         }
 
+        //consulta e verifica se a propriedade existe
         const propriedade = await prisma.propriedade.findUnique({
             where: { id: propriedadeId },
         });
@@ -27,6 +28,7 @@ export const listarProdutosPorPropriedade = async (
             return reply.code(403).send({ error: "Você não tem acesso a esta propriedade." });
         }
 
+        //consulta os produtos da propriedade
         const estoque = await prisma.estoque.findMany({
             where: {
                 propriedadeId: propriedadeId,
@@ -46,6 +48,7 @@ export const listarProdutosPorPropriedade = async (
             },
         });
 
+        //mapeia os dados com as informações necessárias
         const produtos = estoque.map((item) => ({
             idEstoque: item.id,
             idProduto: item.produto.id,

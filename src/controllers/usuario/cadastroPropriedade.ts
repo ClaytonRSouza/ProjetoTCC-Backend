@@ -7,6 +7,7 @@ export const cadastroPropriedade = async (request: FastifyRequest, reply: Fastif
     try {
         const dados = propriedadeDto.parse(request.body);
 
+        // Verifica se o usuário está autenticado
         const authorizationHeader = request.headers.authorization;
         if (!authorizationHeader) {
             reply.status(401).send({ error: "Token de autorização não fornecido." });
@@ -17,6 +18,7 @@ export const cadastroPropriedade = async (request: FastifyRequest, reply: Fastif
         const decodedToken = await admin.auth().verifyIdToken(token);
         const firebaseUid = decodedToken.uid;
 
+        // Verifica se o usuário existe no banco de dados
         const usuario = await prisma.usuario.findUnique({
             where: { firebaseUid: firebaseUid }
         });
@@ -26,6 +28,7 @@ export const cadastroPropriedade = async (request: FastifyRequest, reply: Fastif
             return;
         }
 
+        // Cadastra a propriedade
         const novaPropriedade = await prisma.propriedade.create({
             data: {
                 nome: dados.nome,
